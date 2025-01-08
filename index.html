@@ -16,5 +16,53 @@
         <input type="submit" value="Submit">
     </form>
 
+    <div>
+        {% if alljson %}
+            <h2>JSON Data</h2>
+            {% for jso in alljson %}
+                <p>{{jso}}</p>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Try dictionary in list ; format as such [{},{},{}] / {attr, head, data, efhe, efda} -->
+        {% for each in dl %} 
+            {% for key, value in each.items() %}
+                {% if key == "attr" %}
+                    <h2>Attribute : {{value}}</h2>
+                    <p>Table report</p>
+                {% elif key == "head" or key == "efhe" %}
+                    <table  style="border: 1px solid black; border-collapse: collapse; width: 45%;">    
+                        <tr>
+                        {% for tit in value %}
+                            <th style="border: 1px solid black; border-collapse: collapse; text-align: center; padding: 5px">{{tit}}</th>
+                        {% endfor %}
+                        </tr>
+                {% elif key == "data" or key == "efda" %}
+                    {% for row in value %}
+                        <tr>
+                            {% for cell in row %}
+                                <td style="border: 1px solid black; border-collapse: collapse; text-align: right; padding: 10px">{{cell}}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                    </table>
+                    <br>
+                {% else %}
+                    <p>No data available</p>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}  
+
+    </div>
+
+    <div>
+        {% if allimg %}
+            <h2>Graphs:</h2>
+            {% for img in allimg %}
+                <img src="data:image/png;base64,{{ img }}" alt="graph">
+            {% endfor %}
+        {% endif %}
+    </div>
+
 </body>
 </html>
