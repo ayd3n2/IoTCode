@@ -432,6 +432,7 @@ def formpost():
         for t in timing:
             newValue = {} #attribute, #header if exists, data if exists, ef headers if exists, data if exists
             newValue["attr"] = elem
+            newValue["title"] = t
             if ef == 1: #binary values
                 #Check if date is empty *** for hourly and weekly (EF)
                 if t == "hourly" and date == "":
