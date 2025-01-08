@@ -29,7 +29,9 @@
             {% for key, value in each.items() %}
                 {% if key == "attr" %}
                     <h2>Attribute : {{value}}</h2>
-                    <p>Table report</p>
+                {% elif key == "title" %}
+                    <h3>Timing : {{value}}</h3>
+                    <p>Table report</p>                
                 {% elif key == "head" or key == "efhe" %}
                     <table  style="border: 1px solid black; border-collapse: collapse; width: 45%;">    
                         <tr>
