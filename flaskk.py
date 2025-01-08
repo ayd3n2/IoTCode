@@ -17,6 +17,7 @@ from io import BytesIO
 from PIL import Image
 import tempfile
 import json
+import base64
 
 uri = "mongodb+srv://wizbot21:0NtTiVkNptbch4KN@intern.hd30j.mongodb.net/?retryWrites=true&w=majority&appName=intern"
 
@@ -153,7 +154,10 @@ def plotGraph(pipe, col, tim, val, att, inde, ad, gl):
 
 def plotE(df, timing, ind, ad, gl):
     #plt.figure(figsize=(14,7))
-    day = df["Time"]
+    if timing == "24h":
+        day = df["Time"].astype(int)
+    else:
+        day = df["Time"]
     ef0 = df["EF of 0"]
     ef1 = df["EF of 1"]
     ac0 = df["True Value of 0"]
@@ -163,18 +167,18 @@ def plotE(df, timing, ind, ad, gl):
     plt.scatter(day, ef1, color="red", marker="X", label="Expected frequency for 1", s=65)
     plt.scatter(day, ac1, color="red", marker="o", label="Actual frequency for 1")
     plt.legend(loc='upper left')
-    plt.title("Expected Frequecny" + " based on " + timing + " for 0s and 1s")
-    plt.xlabel(timing)
-    plt.ylabel("Count")
+    plt.title("Expected Frequency" + " based on " + timing + " for 0s and 1s")
     if timing == "24h":
         plt.xticks([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23])
-    elif timing == "1hr" or timing == "1wk":
-        plt.xticks(day)
     elif timing == "7d":
         plt.xticks(rotation=30)
 
     if type(day) == datetime.datetime:
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M:%S'))
+    
+    plt.xlabel(timing)
+    plt.ylabel("Count")
+    
     plt.grid(True)
     plt.tight_layout()
     img_stream = BytesIO()
@@ -187,6 +191,7 @@ def plotE(df, timing, ind, ad, gl):
 
     global indgph
     indgph += 1
+    return df
 
 def calculation(alist, blist, day):
     trail = len(alist)
@@ -204,7 +209,7 @@ def calculation(alist, blist, day):
         ac1 = alist.count(1)
 
         tryData = {
-                "Time": day,
+                "Time": str(day),
                 "Probability of 0": prob0,
                 "Probability of 1": prob1,
                 "EF of 0": ef0,
@@ -248,7 +253,7 @@ def ef24hour(dae,convd, id, ad, gl):
     if len(nlist) != 0:
         df = pandas.DataFrame(nlist)
         printDF(df)
-        plotE(df, "24h", id, ad, gl)
+        return plotE(df, "24h", id, ad, gl)
 
 def ef7day(da,cod, id, ad, gl):
     wkData = []
@@ -269,7 +274,7 @@ def ef7day(da,cod, id, ad, gl):
         y = datetime.datetime.strptime(x, '%Y-%m-%dT%H:%M:%S').date()
         daw = y.strftime("%V")
         if daw == weekno:
-                wkData.append(each)
+            wkData.append(each)
         elif int(daw) == int(weekno)-1:
             oldwkData.append(each)
 
@@ -298,11 +303,11 @@ def ef7day(da,cod, id, ad, gl):
             storeList.append(edict)
         df = pandas.DataFrame(storeList)
         printDF(df)
-        plotE(df, "7d", id, ad, gl)
+        return plotE(df, "7d", id, ad, gl)
     else:
         print("Not enough data. Both weeks must have 7 days of data")
 
-def exportPDF(ad, gl):
+"""def exportPDF(ad, gl):
     pdf = FPDF("P","mm","A4")
     pdf.add_page()
 
@@ -352,6 +357,39 @@ def exportPDF(ad, gl):
     output.seek(0)
 
     return output
+"""
+
+def jsc(ad):
+    nl = []
+    for i in range(len(ad)):
+        df = ad[i]
+        x = pandas.DataFrame.to_dict(df, 'list')
+        print(x)
+        y = json.dumps(x)
+        print(y)
+        nl.append(y)
+    return nl
+
+def dataFHTML(ad):
+    ol = []    
+    for n in range(len(ad)):
+        d = []
+        for col in ad.columns:
+            d.append(str(ad.iloc[n][col]))
+        ol.append(d)
+    return ol
+
+def colFHTML(ad):
+    c = []
+    for col in ad.columns:
+        c.append(col)
+    return c
+
+def bytesHTML(gl):
+    b64ls = []
+    for i in gl:
+        b64ls.append(base64.b64encode(i.getvalue()).decode("utf-8"))
+    return b64ls
         
 
 @app.route('/')
@@ -365,7 +403,9 @@ def formpost():
     date = ""
     convData = []
     allDF = []
+    efDF = []
     graphls = []
+    htlist = []
 
     global indgph
     indgph = 0
@@ -390,6 +430,8 @@ def formpost():
             ef = 1
         
         for t in timing:
+            newValue = {} #attribute, #header if exists, data if exists, ef headers if exists, data if exists
+            newValue["attr"] = elem
             if ef == 1: #binary values
                 #Check if date is empty *** for hourly and weekly (EF)
                 if t == "hourly" and date == "":
@@ -415,7 +457,11 @@ def formpost():
                     {"$sort": {"_id": 1}}
                 ]
                 da = plotGraph(bpipe, mycol, t, "binary", elem, indgph, allDF, graphls)
-
+                h = colFHTML(da)
+                d = dataFHTML(da)
+                newValue["head"] = h
+                newValue["data"] = d
+                
                 pipeline = [ #Retrieve the data to use in calculating the EF
                     {"$match": {f"params.{elem}": {"$exists": "True"}}},
                     {"$addFields": {"isoDate": {"$dateFromString": {"dateString": "$time"}}}},
@@ -437,9 +483,19 @@ def formpost():
                     else:
                         print("removed")
                 if t == "hourly":
-                    ef24hour(date, convData, indgph, allDF, graphls)
+                    efd = ef24hour(date, convData, indgph, allDF, graphls)
+                    if not efd.empty: 
+                        efh = colFHTML(efd)
+                        efd = dataFHTML(efd)
+                        newValue["efhe"] = efh
+                        newValue["efda"] = efd
                 elif t == "weekly" and date != "":
-                    ef7day(date, convData, indgph, allDF, graphls)
+                    efd = ef7day(date, convData, indgph, allDF, graphls)
+                    if not efd.empty: 
+                        efh = colFHTML(efd)
+                        efd = dataFHTML(efd)
+                        newValue["efhe"] = efh
+                        newValue["efda"] = efd
                     
             else: #dec values
             #Check if date is empty *** hourly only
@@ -463,17 +519,27 @@ def formpost():
                         {"$group": {"_id": f"${t}", "min": {"$min": "$decValue"}, "max": {"$max": "$decValue"}, "avg": {"$avg": "$decValue"}}},
                         {"$sort": {"_id": 1}}
                     ]
-                plotGraph(bpipe, mycol, t, "decimal", elem, indgph, allDF, graphls)
-    
+                da = plotGraph(bpipe, mycol, t, "decimal", elem, indgph, allDF, graphls)
+                h = colFHTML(da)
+                d = dataFHTML(da)
+                newValue["head"] = h
+                newValue["data"] = d
+
+            #print(newValue)
+            htlist.append(newValue)
+
     print(len(graphls))
     print(indgph)
-
-    pdfRes = exportPDF(allDF, graphls)
-
-    return send_file(pdfRes, mimetype="application/pdf" ,as_attachment=True, download_name="analysis_report.pdf")
-    #return render_template("index.html")
-        
+    #print(htlist)
+    #pdfRes = exportPDF(allDF, graphls)
+    jsoncal = jsc(allDF)
+    #dataa = dataFHTML(allDF)
+    #header = colFHTML(allDF)
+    #efd = dataFHTML(efDF)
+    #efhead = colFHTML(efDF)
+    imgls = bytesHTML(graphls)
+    #return send_file(pdfRes, mimetype="application/pdf" ,as_attachment=True, download_name="analysis_report.pdf")
+    return render_template("index.html", dl = htlist, alljson=jsoncal, allimg=imgls)
 
 if __name__ == "__main__":
     app.run()
-
