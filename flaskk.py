@@ -306,6 +306,7 @@ def ef7day(da,cod, id, ad, gl):
         return plotE(df, "7d", id, ad, gl)
     else:
         print("Not enough data. Both weeks must have 7 days of data")
+        return pandas.DataFrame([])
 
 """def exportPDF(ad, gl):
     pdf = FPDF("P","mm","A4")
@@ -439,7 +440,8 @@ def formpost():
                     print("Provide an date")
                     continue
                 bpipe = [
-                    {"$match": {f"params.{elem}": {"$exists": "True"}}}, 
+                    {"$match": {f"params.{elem}": {"$exists": "True"}}},
+                    {"$match": {f"params.{elem}": {"$not": {"$eq": "unavailable"}}}}, 
                     {"$addFields": {"isoDate": {"$dateFromString": {"dateString": "$time"}}}},
 
 
@@ -501,7 +503,8 @@ def formpost():
             else: #dec values
             #Check if date is empty *** hourly only
                 bpipe = [
-                        {"$match": {f"params.{elem}": {"$exists": "True"}}}, 
+                        {"$match": {f"params.{elem}": {"$exists": "True"}}},
+                        {"$match": {f"params.{elem}": {"$not": {"$eq": "unavailable"}}}}, 
 
                         {"$addFields": {"decValue": {"$toDouble": f"$params.{elem}"}, "isoDate": {"$dateFromString": {"dateString": "$time"}}}},
 
