@@ -428,6 +428,19 @@ def formpost():
     for elem in attributes: #perform the following code on all the attributes the user input
         if elem == "state" or elem == "outlet":
             continue
+        elif "all" in attributes: #From all change to every attribute in the database
+            attributes.clear()
+            documents = mycol.find()
+            keys = []
+            for doc in documents:
+                if 'params' in doc:
+                    x = list(doc['params'].keys())
+                    y = x[0]
+                    if y not in keys:
+                        keys.append(y)
+                        attributes.append(y)
+            print(keys)
+            continue            
         ef = 0
         if elem == "door" or elem == "motion":
             ef = 1
