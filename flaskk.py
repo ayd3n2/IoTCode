@@ -365,9 +365,9 @@ def jsc(ad):
     for i in range(len(ad)):
         df = ad[i]
         x = pandas.DataFrame.to_dict(df, 'list')
-        print(x)
+        #print(x)
         y = json.dumps(x)
-        print(y)
+        #print(y)
         nl.append(y)
     return nl
 
@@ -426,6 +426,8 @@ def formpost():
             print("Error. Unknown label")
     
     for elem in attributes: #perform the following code on all the attributes the user input
+        if elem == "state" or elem == "outlet":
+            continue
         ef = 0
         if elem == "door" or elem == "motion":
             ef = 1
@@ -487,18 +489,34 @@ def formpost():
                         print("removed")
                 if t == "hourly":
                     efd = ef24hour(date, convData, indgph, allDF, graphls)
-                    if not efd.empty: 
-                        efh = colFHTML(efd)
-                        efd = dataFHTML(efd)
-                        newValue["efhe"] = efh
-                        newValue["efda"] = efd
+                    try:
+                        if not efd.empty: 
+                            efh = colFHTML(efd)
+                            efd = dataFHTML(efd)
+                            newValue["efhe"] = efh
+                            newValue["efda"] = efd
+                        elif efd != None:
+                            efh = colFHTML(efd)
+                            efd = dataFHTML(efd)
+                            newValue["efhe"] = efh
+                            newValue["efda"] = efd    
+                    except:
+                        print("DF error")
                 elif t == "weekly" and date != "":
                     efd = ef7day(date, convData, indgph, allDF, graphls)
-                    if not efd.empty: 
-                        efh = colFHTML(efd)
-                        efd = dataFHTML(efd)
-                        newValue["efhe"] = efh
-                        newValue["efda"] = efd
+                    try:
+                        if not efd.empty: 
+                            efh = colFHTML(efd)
+                            efd = dataFHTML(efd)
+                            newValue["efhe"] = efh
+                            newValue["efda"] = efd
+                        elif efd != None:
+                            efh = colFHTML(efd)
+                            efd = dataFHTML(efd)
+                            newValue["efhe"] = efh
+                            newValue["efda"] = efd    
+                    except:
+                        print("DF error")
                     
             else: #dec values
             #Check if date is empty *** hourly only
